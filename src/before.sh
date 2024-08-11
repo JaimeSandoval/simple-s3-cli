@@ -13,9 +13,9 @@ if [ -f "$CREDENTIALS_FILE" ]; then
   source $CREDENTIALS_FILE
 else
   echo
-  echo "Credentials are not Set. Run:"
+  printf "Credentials are not Set. Run:\n"
+  printf "'s3-cli auth'\n"
   echo
-  echo "'s3-cli auth'"
   exit 1
 fi
 
@@ -23,5 +23,6 @@ fi
 if ! aws sts get-caller-identity > /dev/null 2>&1; then
   echo "AWS credentials are invalid or expired. Run:"
   echo
-  echo "'s3-cli auth'"
+  printf "'s3-cli auth'\n"
+  echo
 fi

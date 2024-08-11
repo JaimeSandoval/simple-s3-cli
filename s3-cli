@@ -609,6 +609,7 @@ s3_cli_choose_command() {
   echo
   echo "'export S3_BUCKET_NAME=$S3_BUCKET_NAME'"
   echo
+
 }
 
 # :command.function
@@ -1376,9 +1377,9 @@ before_hook() {
     source $CREDENTIALS_FILE
   else
     echo
-    echo "Credentials are not Set. Run:"
+    printf "Credentials are not Set. Run:\n"
+    printf "'s3-cli auth'\n"
     echo
-    echo "'s3-cli auth'"
     exit 1
   fi
 
@@ -1386,7 +1387,8 @@ before_hook() {
   if ! aws sts get-caller-identity > /dev/null 2>&1; then
     echo "AWS credentials are invalid or expired. Run:"
     echo
-    echo "'s3-cli auth'"
+    printf "'s3-cli auth'\n"
+    echo
   fi
 
 }
