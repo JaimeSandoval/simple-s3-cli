@@ -3,8 +3,11 @@
 # echo "# you can edit it freely and regenerate (it will not be overwritten)"
 # inspect_args
 
+#Clean Up the Credentials File
+rm -rf $CREDENTIALS_FILENAME
+
 ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
-ROLE_SESSION_NAME="YourSessionName"
+ROLE_SESSION_NAME="s3-cli-$USER"
 
 # Assume the role and capture the output
 STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
@@ -21,14 +24,14 @@ AWS_SECRET_ACCESS_KEY=$(echo $STS_OUTPUT | jq -r '.Credentials.SecretAccessKey')
 AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
 
 # Create or reuse a temporary file
-CREDENTIALS_FILE=$(mktemp $CREDENTIALS_FILENAME)
+touch $CREDENTIALS_FILENAME
 
 # Write the credentials to the temp file
-cat > $CREDENTIALS_FILE <<EOL
+cat > $CREDENTIALS_FILENAME <<EOL
 export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 EOL
 
 # Inform the user
-echo "Credentials saved to $CREDENTIALS_FILE"
+echo "Credentials saved to $CREDENTIALS_FILENAME"

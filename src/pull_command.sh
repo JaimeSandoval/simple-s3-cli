@@ -3,6 +3,8 @@
 # echo "# you can edit it freely and regenerate (it will not be overwritten)"
 # inspect_args
 
+get_auth
+
 LOCAL_PATH=${args[target_path]:-$(pwd)} #Default to `pwd` if not provided
 SOURCE_PATH=${args[source_path]}
 EMPTY=""

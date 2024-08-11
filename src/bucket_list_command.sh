@@ -2,6 +2,7 @@
 # echo "# code for 's3-cli bucket list' goes here"
 # echo "# you can edit it freely and regenerate (it will not be overwritten)"
 # inspect_args
+get_auth
 
 BUCKET_NAME=${args[bucket]}
 EMPTY=""
