@@ -6,7 +6,17 @@ environment_variables:
 - name: s3_bucket_name
   help: Set the S3 URI to the s3 bucket name
 
+- name: credentials_filename
+  help: aws credentials filename
+  default: /tmp/s3_cli_aws_credentials
+
 commands:
+- name: auth
+  help: run this command to authenticate before running cli commands
+
+  examples:
+  - s3-cli auth
+
 - name: bucket
   help: bucket command with subcommand options
 

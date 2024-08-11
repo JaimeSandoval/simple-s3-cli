@@ -26,6 +26,7 @@ s3_cli_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "Commands:"
+  printf "  %s   run this command to authenticate before running cli commands\n" "auth    "
   printf "  %s   bucket command with subcommand options\n" "bucket  "
   printf "  %s   List all Buckets in the account\n" "list    "
   printf "  %s   Export Bucket Name to use for other commands\n" "choose  "
@@ -53,6 +54,38 @@ s3_cli_usage() {
     # :environment_variable.usage
     printf "  %s\n" "S3_BUCKET_NAME"
     printf "    Set the S3 URI to the s3 bucket name\n"
+    echo
+
+    # :environment_variable.usage
+    printf "  %s\n" "CREDENTIALS_FILENAME"
+    printf "    aws credentials filename\n"
+    printf "    Default: /tmp/s3_cli_aws_credentials\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+s3_cli_auth_usage() {
+  printf "s3-cli auth - run this command to authenticate before running cli commands\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  s3-cli auth\n"
+  printf "  s3-cli auth --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n $long_usage ]]; then
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  s3-cli auth\n"
     echo
 
   fi
@@ -476,6 +509,44 @@ inspect_args() {
 }
 
 # :command.command_functions
+# :command.function
+s3_cli_auth_command() {
+  # src/auth_command.sh
+  # echo "# this file is located in 'src/auth_command.sh'"
+  # echo "# code for 's3-cli auth' goes here"
+  # echo "# you can edit it freely and regenerate (it will not be overwritten)"
+  # inspect_args
+
+  ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
+  ROLE_SESSION_NAME="YourSessionName"
+
+  # Assume the role and capture the output
+  STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
+
+  # Check if assume-role was successful
+  if [ $? -ne 0 ]; then
+    echo "Failed to assume role"
+    exit 1
+  fi
+
+  # Extract credentials from the STS output
+  AWS_ACCESS_KEY_ID=$(echo $STS_OUTPUT | jq -r '.Credentials.AccessKeyId')
+  AWS_SECRET_ACCESS_KEY=$(echo $STS_OUTPUT | jq -r '.Credentials.SecretAccessKey')
+  AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
+
+  # Create or reuse a temporary file
+  CREDENTIALS_FILE=$(mktemp $CREDENTIALS_FILENAME)
+
+  # Write the credentials to the temp file
+  cat > $CREDENTIALS_FILE <<EOL
+export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
+EOL
+
+  # Inform the user
+  echo "Credentials saved to $CREDENTIALS_FILE"
+}
 
 # :command.function
 s3_cli_bucket_list_command() {
@@ -648,14 +719,24 @@ parse_requirements() {
   done
 
   # :command.environment_variables_filter
+  # :command.environment_variables_default
+  export CREDENTIALS_FILENAME="${CREDENTIALS_FILENAME:-/tmp/s3_cli_aws_credentials}"
 
   env_var_names+=("S3_BUCKET_NAME")
+  env_var_names+=("CREDENTIALS_FILENAME")
 
   # :command.command_filter
   action=${1:-}
 
   case $action in
     -*) ;;
+
+    auth)
+      action="auth"
+      shift
+      s3_cli_auth_parse_requirements "$@"
+      shift $#
+      ;;
 
     bucket)
       action="bucket"
@@ -718,6 +799,50 @@ parse_requirements() {
       ;;
 
   esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+s3_cli_auth_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    case "${1:-}" in
+      --help | -h)
+        long_usage=yes
+        s3_cli_auth_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="auth"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1245,28 +1370,25 @@ before_hook() {
   # src/before.sh
   # echo "==[ Before Hook Called ]=="
 
-  # Variables
-  ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
-  ROLE_SESSION_NAME="YourSessionName"
-
-  # Assume the role and capture the output
-  STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
-
-  # Check if assume-role was successful
-  if [ $? -ne 0 ]; then
-    echo "Failed to assume role"
+  # Check if the credentials file exists
+  if [ -f "$CREDENTIALS_FILE" ]; then
+    # Source the credentials file
+    source $CREDENTIALS_FILE
+  else
+    echo
+    echo "Credentials are not Set. Run:"
+    echo
+    echo "'s3-cli auth'"
     exit 1
   fi
 
-  # Extract credentials from the STS output
-  AWS_ACCESS_KEY_ID=$(echo $STS_OUTPUT | jq -r '.Credentials.AccessKeyId')
-  AWS_SECRET_ACCESS_KEY=$(echo $STS_OUTPUT | jq -r '.Credentials.SecretAccessKey')
-  AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
+  # Check if the credentials are valid
+  if ! aws sts get-caller-identity > /dev/null 2>&1; then
+    echo "AWS credentials are invalid or expired. Run:"
+    echo
+    echo "'s3-cli auth'"
+  fi
 
-  # Export credentials as environment variables
-  export AWS_ACCESS_KEY_ID
-  export AWS_SECRET_ACCESS_KEY
-  export AWS_SESSION_TOKEN
 }
 
 # :command.initialize
@@ -1274,6 +1396,9 @@ initialize() {
   version="0.1.0"
   long_usage=''
   set -e
+
+  # :command.environment_variables_default
+  export CREDENTIALS_FILENAME="${CREDENTIALS_FILENAME:-/tmp/s3_cli_aws_credentials}"
 
 }
 
@@ -1289,6 +1414,7 @@ run() {
   before_hook
 
   case "$action" in
+    "auth") s3_cli_auth_command ;;
     "bucket") s3_cli_bucket_command ;;
     "bucket list") s3_cli_bucket_list_command ;;
     "list") s3_cli_list_command ;;

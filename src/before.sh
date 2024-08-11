@@ -6,25 +6,22 @@
 ## You can safely delete this file if you do not need it.
 # echo "==[ Before Hook Called ]=="
 
-# Variables
-ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
-ROLE_SESSION_NAME="YourSessionName"
 
-# Assume the role and capture the output
-STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
-
-# Check if assume-role was successful
-if [ $? -ne 0 ]; then
-  echo "Failed to assume role"
+# Check if the credentials file exists
+if [ -f "$CREDENTIALS_FILE" ]; then
+  # Source the credentials file
+  source $CREDENTIALS_FILE
+else
+  echo
+  echo "Credentials are not Set. Run:"
+  echo
+  echo "'s3-cli auth'"
   exit 1
 fi
 
-# Extract credentials from the STS output
-AWS_ACCESS_KEY_ID=$(echo $STS_OUTPUT | jq -r '.Credentials.AccessKeyId')
-AWS_SECRET_ACCESS_KEY=$(echo $STS_OUTPUT | jq -r '.Credentials.SecretAccessKey')
-AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
-
-# Export credentials as environment variables
-export AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY
-export AWS_SESSION_TOKEN
+# Check if the credentials are valid
+if ! aws sts get-caller-identity > /dev/null 2>&1; then
+  echo "AWS credentials are invalid or expired. Run:"
+  echo
+  echo "'s3-cli auth'"
+fi
