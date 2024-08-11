@@ -540,8 +540,11 @@ s3_cli_auth_command() {
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
   # inspect_args
 
+  #Clean Up the Credentials File
+  rm -rf $CREDENTIALS_FILENAME
+
   ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
-  ROLE_SESSION_NAME="YourSessionName"
+  ROLE_SESSION_NAME="s3-cli-$USER"
 
   # Assume the role and capture the output
   STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
@@ -558,17 +561,17 @@ s3_cli_auth_command() {
   AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
 
   # Create or reuse a temporary file
-  CREDENTIALS_FILE=$(mktemp $CREDENTIALS_FILENAME)
+  touch $CREDENTIALS_FILENAME
 
   # Write the credentials to the temp file
-  cat > $CREDENTIALS_FILE <<EOL
+  cat > $CREDENTIALS_FILENAME <<EOL
 export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 EOL
 
   # Inform the user
-  echo "Credentials saved to $CREDENTIALS_FILE"
+  echo "Credentials saved to $CREDENTIALS_FILENAME"
 }
 
 # :command.function
@@ -578,6 +581,7 @@ s3_cli_bucket_list_command() {
   # echo "# code for 's3-cli bucket list' goes here"
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
   # inspect_args
+  get_auth
 
   BUCKET_NAME=${args[bucket]}
   EMPTY=""
@@ -611,6 +615,7 @@ s3_cli_list_command() {
   # echo "# this file is located in 'src/list_command.sh'"
   # echo "# code for 's3-cli list' goes here"
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
+  get_auth
 
   printf "Listing AWS Account Buckets:"
   echo
@@ -652,6 +657,8 @@ s3_cli_push_command() {
   # echo "# code for 's3-cli push' goes here"
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
 
+  get_auth
+
   TARGET_PATH=${args[target_path]}
   LOCAL_PATH=${args[source_path]}
   EMPTY=""
@@ -683,6 +690,8 @@ s3_cli_pull_command() {
   # echo "# code for 's3-cli pull' goes here"
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
   # inspect_args
+
+  get_auth
 
   LOCAL_PATH=${args[target_path]:-$(pwd)} #Default to `pwd` if not provided
   SOURCE_PATH=${args[source_path]}
