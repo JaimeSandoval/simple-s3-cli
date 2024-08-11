@@ -4,5 +4,7 @@
 
 export S3_BUCKET_NAME=${args[bucket]}
 
-printf "S3 Bucket set to '$S3_BUCKET_NAME'"
+echo "Run the command:"
+echo
+echo "'export S3_BUCKET_NAME=$S3_BUCKET_NAME'"
 echo

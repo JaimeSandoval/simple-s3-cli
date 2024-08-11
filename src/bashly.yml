@@ -24,8 +24,8 @@ commands:
   - s3-cli bucket ls
 
   environment_variables:
-  - name: default_target_location
-    help: Set the default location to download to
+  - name: s3_bucket_name
+    help: Set the envvar S3_BUCKET_NAME
 
 
 - name: list

@@ -84,8 +84,8 @@ s3_cli_bucket_usage() {
     printf "%s\n" "Environment Variables:"
 
     # :environment_variable.usage
-    printf "  %s\n" "DEFAULT_TARGET_LOCATION"
-    printf "    Set the default location to download to\n"
+    printf "  %s\n" "S3_BUCKET_NAME"
+    printf "    Set the envvar S3_BUCKET_NAME\n"
     echo
 
     # :command.usage_examples
@@ -497,7 +497,6 @@ s3_cli_bucket_list_command() {
   case "$BUCKET_NAME" in
     $EMPTY)
     BUCKET_PATH="s3://$S3_BUCKET_NAME"
-    exit 1
     ;;
     *)
       BUCKET_PATH="s3://$BUCKET_NAME"
@@ -535,9 +534,10 @@ s3_cli_choose_command() {
 
   export S3_BUCKET_NAME=${args[bucket]}
 
-  printf "S3 Bucket set to '$S3_BUCKET_NAME'"
+  echo "Run the command:"
   echo
-
+  echo "'export S3_BUCKET_NAME=$S3_BUCKET_NAME'"
+  echo
 }
 
 # :command.function
@@ -546,7 +546,7 @@ s3_cli_copy_command() {
   # echo "# this file is located in 'src/copy_command.sh'"
   # echo "# code for 's3-cli copy' goes here"
   # echo "# you can edit it freely and regenerate (it will not be overwritten)"
-  # inspect_args
+  inspect_args
 
 }
 
@@ -762,7 +762,7 @@ s3_cli_bucket_parse_requirements() {
 
   # :command.environment_variables_filter
 
-  env_var_names+=("DEFAULT_TARGET_LOCATION")
+  env_var_names+=("S3_BUCKET_NAME")
 
   # :command.command_filter
   action=${1:-}
@@ -1240,6 +1240,35 @@ s3_cli_sync_dir_parse_requirements() {
 
 }
 
+# :command.user_hooks
+before_hook() {
+  # src/before.sh
+  # echo "==[ Before Hook Called ]=="
+
+  # Variables
+  ROLE_ARN="arn:aws:iam::123456789012:role/YourRoleName"
+  ROLE_SESSION_NAME="YourSessionName"
+
+  # Assume the role and capture the output
+  STS_OUTPUT=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$ROLE_SESSION_NAME")
+
+  # Check if assume-role was successful
+  if [ $? -ne 0 ]; then
+    echo "Failed to assume role"
+    exit 1
+  fi
+
+  # Extract credentials from the STS output
+  AWS_ACCESS_KEY_ID=$(echo $STS_OUTPUT | jq -r '.Credentials.AccessKeyId')
+  AWS_SECRET_ACCESS_KEY=$(echo $STS_OUTPUT | jq -r '.Credentials.SecretAccessKey')
+  AWS_SESSION_TOKEN=$(echo $STS_OUTPUT | jq -r '.Credentials.SessionToken')
+
+  # Export credentials as environment variables
+  export AWS_ACCESS_KEY_ID
+  export AWS_SECRET_ACCESS_KEY
+  export AWS_SESSION_TOKEN
+}
+
 # :command.initialize
 initialize() {
   version="0.1.0"
@@ -1257,6 +1286,7 @@ run() {
   declare -a input=()
   normalize_input "$@"
   parse_requirements "${input[@]}"
+  before_hook
 
   case "$action" in
     "bucket") s3_cli_bucket_command ;;
