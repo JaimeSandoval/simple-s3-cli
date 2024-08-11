@@ -1,0 +1,139 @@
+name: s3-cli
+help: s3-cli is a tool that allows you to interact account buckets
+version: 0.1.0
+
+environment_variables:
+- name: s3_bucket_name
+  help: Set the S3 URI to the s3 bucket name
+
+commands:
+- name: bucket
+  help: bucket command with subcommand options
+
+  commands:
+  - name: list
+    alias: ls
+    help: List files in the bucket
+    args:
+    - name: bucket
+      required: false
+      help: Bucket Name
+
+  examples:
+  - s3-cli bucket list
+  - s3-cli bucket ls
+
+  environment_variables:
+  - name: default_target_location
+    help: Set the default location to download to
+
+
+- name: list
+  alias: ls
+  help: List all Buckets in the account
+
+  examples:
+  - s3-cli list
+  - s3-cli ls
+
+
+- name: choose
+  alias: pick
+  help: Export Bucket Name to use for other commands
+  args:
+  - name: bucket
+    required: true
+    help: Bucket Name
+
+  examples:
+  - s3-cli choose mybucket
+  - s3-cli pick mybucket
+
+
+- name: copy
+  alias: cp
+  help: Copy a File from local to S3, or vice versa
+  args:
+  - name: source
+    required: true
+    help: Source to Copy From
+  - name: target
+    required: true
+    help: Target to Copy to
+
+  examples:
+  - s3-cli copy myfile my-bucket
+  - s3-cli copy
+
+  environment_variables:
+  - name: s3_bucket_name
+    help: Set the S3 URI to the s3 bucket name
+
+
+- name: push
+  alias: mv
+  help: Moves a local file to S3 and then deletes the source object or file. mv and push are interchangeable./n If you set the bucket name with choose, providing the bucket name is optional. You must pass the folder name or path where the file will be stored with or without the bucket name.
+  args:
+  - name: source_path
+    required: true
+    help: filename, relative path to filename, absolute path to filename /../../filename
+  - name: target_path
+    required: false
+    help: bucket_name/folder_in_bucket/other_folder/, or folder_in_bucket/other_folder/, or nothing if no folder.
+
+  examples:
+  - s3-cli mv myfile_path
+  - s3-cli push myfile_path
+  - s3-cli push myfile_path my_bucket
+  - s3-cli push myfile_path my_bucket/folder_in_bucket/
+  - s3-cli push myfile_path folder_in_bucket/
+
+  environment_variables:
+  - name: s3_bucket_name
+    help: Set the S3 URI to the s3 bucket name
+
+
+- name: pull
+  alias: get
+  help: Copys a file from S3 to local
+  args:
+  - name: source_path
+    required: true
+    help: S3 Bucket Name to Copy from
+  - name: target_path
+    required: false
+    help: Local Path to copy to
+
+  examples:
+  - s3-cli pull myfile
+  - s3-cli mv myfile mynewlocalfile
+
+  environment_variables:
+  - name: s3_bucket_name
+    help: Set the S3 URI to the s3 bucket name
+
+
+- name: sync-dir
+  alias: sync
+  help: Copys everything in a local directory to S3. <LocalPath> <S3Uri>
+  args:
+  - name: source
+    required: true
+    help: Source to Copy From
+
+  flags:
+  - long: --dryrun
+    short: -d
+    help: Displays the operations that would be performed using the specified command without actually running them.
+
+  - long: --quiet
+    short: -q
+    help: (boolean) Does not display the operations performed from the specified command.
+
+  examples:
+  - s3-cli sync-dir
+  - s3-cli sync /home/jaime/target/
+
+  environment_variables:
+  - name: s3_bucket_name
+    help: Set the S3 URI to the s3 bucket name
