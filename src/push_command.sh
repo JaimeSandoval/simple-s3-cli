@@ -2,6 +2,8 @@
 # echo "# code for 's3-cli push' goes here"
 # echo "# you can edit it freely and regenerate (it will not be overwritten)"
 
+get_auth
+
 TARGET_PATH=${args[target_path]}
 LOCAL_PATH=${args[source_path]}
 EMPTY=""
