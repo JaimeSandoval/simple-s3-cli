@@ -15,7 +15,6 @@ fi
 case "$BUCKET_NAME" in
   $EMPTY)
   BUCKET_PATH="s3://$S3_BUCKET_NAME"
-  exit 1
   ;;
   *)
     BUCKET_PATH="s3://$BUCKET_NAME"
